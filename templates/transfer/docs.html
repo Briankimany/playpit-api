@@ -1,0 +1,45 @@
+{% extends "home.html" %}
+{% block title %}Transfer API Documentation{% endblock %}
+{% block styles %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/transfer/docs.css') }}">
+      <!-- CSS for Markdown Styling -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-light.min.css" integrity="sha512-/Ba7b0N55R4U+lQ4KYIBi0e2aSn3dfnWDlNk0Qp3S+XASDCR42Flok4nyxdLPHrh0YyzxEcVta9pXYU4OR6OUg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  
+  <style>
+    .markdown-body {
+      box-sizing: border-box;
+      min-width: 200px;
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+      .markdown-body {
+          box-sizing: border-box;
+          min-width: 200px;
+          max-width: 980px;
+          margin: 0 auto;
+          padding: 45px;
+      }
+  
+      @media (max-width: 767px) {
+          .markdown-body {
+              padding: 15px;
+          }
+      }
+    </style>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/transfer/docs.js') }}"></script>
+{% endblock %}
+
+{% block content %}
+
+<article class="markdown-body">
+    {{ docs|safe }}
+  </article>
+  
+{% endblock %}

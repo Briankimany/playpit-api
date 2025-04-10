@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Payment API Documentation</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.2.0/github-markdown-light.min.css">
+  <style>
+    body {
+      background: #f9f9f9;
+      font-family: sans-serif;
+    }
+    .markdown-body {
+      max-width: 960px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: #fff;
+      border-radius: 8px;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 1rem;
+      overflow-x: auto;
+      border-radius: 6px;
+    }
+    code {
+      font-family: monospace;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1rem 0;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+    th, td {
+      padding: 0.5rem;
+      text-align: left;
+    }
+  </style>
+</head>
+<body>
+  <article class="markdown-body">
+
+<h1>Payment API Documentation</h1>
+
+<h2>Overview</h2>
+<p>This API provides endpoints for managing money transfers, payments, and related operations. It supports both single and bulk transfers, status checking, and administrative functions.</p>
+
+<h2>Base URL</h2>
+<pre><code>{{payment_api}}</code></pre>
+
+<h2>Authentication</h2>
+<p>All endpoints require Bearer token authentication:</p>
+<pre><code>Authorization: Bearer {{API_TOKEN}} or {{ADMIN_TOKEN}}</code></pre>
+
+<hr>
+
+<h2>Transfer Endpoints</h2>
+
+<h3>1. Get Pending Approvals</h3>
+<p><strong>GET</strong> <code>/transfers/approvals-pending</code></p>
+<p>Returns batch transfers waiting for approval.</p>
+
+<pre><code>{
+  "created_at": "2025-04-09 16:38:05",
+  "number_transaction": 3,
+  "status_code": "BP104",
+  "total_amount": "2400.0000000000",
+  "tracking_id": "uuid"
+}</code></pre>
+
+<h3>2. Initiate Single Transfer</h3>
+<p><strong>POST</strong> <code>/transfers/initiate/single</code></p>
+
+<pre><code>{
+  "records": {
+    "name": "John Doe",
+    "phone": 254700000000,
+    "amount": 5000
+  },
+  "requires_approval": "YES"
+}</code></pre>
+
+<h3>3. Initiate Bulk Transfers</h3>
+<p><strong>POST</strong> <code>/transfers/initiate/bulk</code></p>
+
+<pre><code>{
+  "records": [
+    {
+      "name": "Jane",
+      "phone": "254700000001",
+      "amount": 700
+    },
+    {
+      "name": "Doe",
+      "phone": "254700000002",
+      "amount": 800
+    }
+  ],
+  "requires_approval": "YES"
+}</code></pre>
+
+<h3>4. Check Transfer Status</h3>
+<p><strong>POST</strong> <code>/transfers/check-status</code></p>
+
+<pre><code>{
+  "tracking_id": "uuid"
+}</code></pre>
+
+<h3>5. Approve Batch Transfer</h3>
+<p><strong>POST</strong> <code>/transfers/approve</code></p>
+
+<pre><code>{
+  "batch_id": "uuid"
+}</code></pre>
+
+<h3>6. Inspect Transfers</h3>
+<p><strong>POST</strong> <code>/transfers/inspect</code></p>
+
+<pre><code>{
+  "date": "YYYY-MM-DD",
+  "logic": "le"
+}</code></pre>
+
+<hr>
+
+<h2>Payment Endpoints</h2>
+
+<h3>1. Initiate Payment</h3>
+<p><strong>POST</strong> <code>/pay</code></p>
+
+<pre><code>{
+  "phone": "254700000000",
+  "amount": 700,
+  "orderid": "your-order-id"
+}</code></pre>
+
+<h3>2. Check Payment Status</h3>
+<p><strong>GET</strong> <code>/check-status</code></p>
+<p><strong>Query Params:</strong> <code>invoice_id</code></p>
+
+<hr>
+
+<h2>Status Codes</h2>
+<table>
+  <thead>
+    <tr><th>Code</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>BP100</td><td>Pending Approval</td></tr>
+    <tr><td>BP103</td><td>Processing</td></tr>
+    <tr><td>BP104</td><td>Awaiting Approval</td></tr>
+  </tbody>
+</table>
+
+<h2>Error Handling</h2>
+<p>Common error structure:</p>
+
+<pre><code>{
+  "error": "Description of error",
+  "message": "Human-readable message"
+}</code></pre>
+
+<p>Status codes:</p>
+<ul>
+  <li>400: Bad Request</li>
+  <li>401: Unauthorized</li>
+  <li>403: Forbidden</li>
+  <li>404: Not Found</li>
+  <li>500: Internal Server Error</li>
+</ul>
+
+<h2>Examples</h2>
+
+<h3>Initiate Single Transfer</h3>
+<pre><code>curl -X POST \
+  {{payment_api}}/transfers/initiate/single \
+  -H 'Authorization: Bearer {{API_TOKEN}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "records": {
+      "name": "John Doe",
+      "phone": 254700000000,
+      "amount": 5000
+    },
+    "requires_approval": "YES"
+  }'</code></pre>
+
+<h3>Check Transfer Status</h3>
+<pre><code>curl -X POST \
+  {{payment_api}}/transfers/check-status \
+  -H 'Authorization: Bearer {{ADMIN_TOKEN}}' \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "tracking_id": "uuid"
+  }'</code></pre>
+
+<h2>Notes</h2>
+<ol>
+  <li>All amounts should be in numeric format (e.g., 5000 for 5000.00)</li>
+  <li>Phone numbers must be in international format without <code>+</code> (e.g., 254712345678)</li>
+  <li>Timestamps use ISO 8601 format</li>
+</ol>
+
+  </article>
+</body>
+</html>

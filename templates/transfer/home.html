@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Payment API</title>
+    {% block title %}
+        <title>Payment API</title>
+    {% endblock %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/transfer/home.css') }}">
+    {% block styles %} {% endblock %}
+    {% block scripts %}
+        <script src="{{ url_for('static', filename='js/transfer/home.js') }}"></script>
+    {% endblock %}
+
+    
+
+
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to Payment API</h1>
+        <p>
+            Simplify your payment collection and fund transfer processes with our powerful and secure API. 
+            Whether you're a developer or a business owner, we've got you covered.
+        </p>
+        {% block content %}  {% endblock %}
+   <!-- Trigger Button -->
+    <button class="btn" onclick="openModal()">Docs</button>
+
+    <!-- Modal -->
+    <div id="tokenModal" class="modal-overlay">
+        <div class="modal">
+            <h2>Enter Access Token</h2>
+            <input type="text" id="accessTokenInput" placeholder="Access Token" />
+            <div class="modal-buttons">
+                <button class="btn" onclick="submitToken()">Submit</button>
+                <button class="btn cancel" onclick="closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+    </div>
+</body>
+</html>

@@ -6,3 +6,6 @@
 /UN-APPROVED
 config.json
 *.json
+*.db
+/APP-DATA
+.env
