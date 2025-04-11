@@ -75,6 +75,8 @@ class TransactionApi:
         self.transfer_manager = TransferManager()
 
         self.pending_approval_dir = Path("UN-APPROVED")
+        self.approved_dir = Path("APPROVED")
+        self.checked_status_dir = Path("CHECKED_STATUS")
 
         self.pending_approval_dir.mkdir(parents = True , exist_ok = True)
 
@@ -144,7 +146,7 @@ class TransactionApi:
         
         self.process_transfer_step(
             response=approved,
-            filename='approved.json'
+            filename=self.approved_dir/f"{approved['tracking_id']}approved.json"
         )
         return approved['tracking_id']
         
@@ -162,7 +164,7 @@ class TransactionApi:
             
         self.process_transfer_step(
             response=status,
-            filename=f'checked_status_{tracking_id}.json'
+            filename=self.checked_status_dir/f'{tracking_id}.json'
         )
         return True
 
@@ -177,6 +179,12 @@ class TransactionApi:
             individual_transaction_data=individual_data
         )
         
+        if not isinstance(filename , Path):
+            filename = Path(filename)
+        
+        filename.parent.mkdir(parents =True ,exist_ok=True)
+
         save(filename, response)
+        
         return response
 

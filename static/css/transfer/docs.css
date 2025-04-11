@@ -104,3 +104,40 @@ pre code {
 }
 
 
+ul, ol {
+    margin-left: 2rem;
+    margin-bottom: 1rem;
+    color: #475569;
+}
+body {
+  background: #f9f9f9;
+  font-family: sans-serif;
+}
+.markdown-body {
+  max-width: 960px;
+  margin: 2rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 8px;
+}
+pre {
+  background: #f4f4f4;
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: 6px;
+}
+code {
+  font-family: monospace;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+}
+table, th, td {
+  border: 1px solid #ccc;
+}
+th, td {
+  padding: 0.5rem;
+  text-align: left;
+}

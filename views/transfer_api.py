@@ -103,37 +103,13 @@ def home(*args , **kwargs):
     access_token = request.args.get('token' ,None)
     return render_template("home.html" ,token=access_token)
      
-# @transfer_bp.route("/docs")
-# # @verified_for_docs
-# # @api_error_logger(logger=LOG.api_logger , in_development=IN_DEVELOPMENT)
-# def docs(*args , **kwargs):
-#     access_token = request.args.get('access_token' ,None)
-#     # text= render_template("docs.html" , token =access_token )
 
-#     file_path2 = Path(".")/'templates/transfer/docs.md'
- 
-    
-#     with open(file_path2 , 'r') as file:
-#         md_texxt = file.read()
-    
-#     return render_template('docs.html' ,docs=md_texxt)
-   
-from pathlib import Path
-import markdown  # <-- Make sure you have this installed
 
 @transfer_bp.route("/docs")
+@verified_for_docs
+@api_error_logger(logger=LOG.get_payment_logger , in_development=IN_DEVELOPMENT)
 def docs(*args, **kwargs):
-    access_token = request.args.get('access_token', None)
-
-    file_path = Path("templates/transfer/docs.md")
-
-    with open(file_path, 'r') as file:
-        md_text = file.read()
-
-    # Convert Markdown to HTML
-    html_content = markdown.markdown(md_text, extensions=['fenced_code', 'codehilite'])
-
-    return render_template('docs2.html', docs=html_content)
+    return render_template('docs2.html')
 
 
 # =======================
