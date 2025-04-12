@@ -1,9 +1,7 @@
 from flask import Flask, request, jsonify, session 
 from intasend import APIService
-from dotenv import load_dotenv
+from flask import render_template, redirect
 import os
-
-import logging
 
 
 import time
@@ -12,19 +10,24 @@ from flask_cors import CORS
 
 from utils.intasend_api_simulate import simulate_status
 from db_manager.intasend_remote_db import update_payment_status , add_payment_request , get_payment_status
-
+from pathlib import Path
 
 
 from views.transfer_api import transfer_bp ,token_required ,content_type_is_json
 from utils.logger import LOG , api_error_logger
 from models.transfers import create_db
-from pathlib import Path
+from utils.environ_variables import IN_DEVELOPMENT ,PUBLISHABLE_KEY,SECRET_KEY ,test ,SIMULATE_TRANSFERS
+from db_manager.intasend_remote_db import UserManger
 
-load_dotenv()
+
 create_db()
+current_dir = Path(".")
 
-app = Flask(__name__ ,
-            static_folder=(Path(".")/'static').absolute())
+app = Flask(__name__ ,template_folder = (current_dir/'templates').absolute(),
+            static_folder=(current_dir/'static').absolute()
+            )
+
+
 CORS(app)
 
 app.secret_key= os.getenv('FLASK_SECRET_KEY')
@@ -34,25 +37,11 @@ app.config['EXECUTOR_PROPAGATE_EXCEPTIONS'] = True
 app.register_blueprint(transfer_bp)
 
 
-test = True
-if not  os.getenv('SIMULATE_TRANSFERS','false').lower() == 'true':
-    test= False
-
-    PUBLISHABLE_KEY = os.getenv("PUB_KEY")
-    SECRET_KEY = os.getenv("SECRET_KEY")
-
-else:
-    PUBLISHABLE_KEY = os.getenv("SANDBOX_PUBLISHABLE_KEY")
-    SECRET_KEY = os.getenv("SANDBOX_SECRET_KEY")
-
-API_TOKEN = os.getenv("API_TOKEN")
-IN_DEVELOPMENT = os.getenv("IN_DEVELOPMENT", "false").lower() == 'true'
-SIMULATE_TRANSFERS = os.getenv("SIMULATE_TRANSFERS", "true").lower() == 'true'
-
-print(SIMULATE_TRANSFERS , IN_DEVELOPMENT)
+def initiate_intasend_service():
+    return APIService(token=SECRET_KEY, publishable_key=PUBLISHABLE_KEY ,test = test)    
 
 
-def make_request_to_instasend(pub, key, phone: int, amount,orderid ,description="Purchase" , simulate=False):
+def make_request_to_instasend(pub, key, phone: int, amount,orderid ,description="Purchase" , simulate=False ,test = test):
     LOG.api_logger.info("__"*50)
     LOG.api_logger.info(f"Initiating payment request to Intasend: Phone={phone}, Amount={amount}, Description={description}")
 
@@ -62,10 +51,15 @@ def make_request_to_instasend(pub, key, phone: int, amount,orderid ,description=
         else:
             LOG.api_logger.debug("Starting remote InstaSend request for phone: %s, amount: %s", phone, amount)
 
-            service = APIService(token=key, publishable_key=pub)
+            service =initiate_intasend_service()
+
             response = service.collect.mpesa_stk_push(phone_number=phone, amount=amount, narrative=description)
 
             LOG.api_logger.debug(f"Received response from Intasend: {response}")
+
+            if "errors" in response:
+                raise
+
 
         session['response'] = response
         invoiceid = response['invoice']['invoice_id']
@@ -79,65 +73,108 @@ def make_request_to_instasend(pub, key, phone: int, amount,orderid ,description=
         return None
 
 
-@app.route("/check-status")
+USERNAME = "admin"
+PASSWORD = "secure123"
+
+@app.route("/" , methods=["GET", "POST"])
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+        verified = UserManger.verify_user(email=email , password=password)
+        if verified:
+            session["logged_in"] = True
+            return redirect("/dashboard")
+        
+        return render_template("login.html", error="Invalid credentials")
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/login")
+
+
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapper(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect("/login")
+        return view_func(*args, **kwargs)
+    return wrapper
+
+
+
+
+@app.route("/dashboard")
+@login_required
+def dashboard():
+    return render_template("dashboard.html")  
+
+
+@app.route("/check-status" ,methods = ["POST"])
 @token_required()
 @content_type_is_json
 @api_error_logger(logger = LOG.api_logger , in_development=IN_DEVELOPMENT)
 def check_payment_status():
     
-    LOG.api_logger.debug("##"*35)
-
     data = request.get_json()
     
     SIMULATE  =data.get("SIMULATE", True)
     MAXRETRIES  = data.get("MAXRETRIES" , None)
     invoice_id = data.get("invoice_id", None)
+
     if not invoice_id:
         return jsonify({"MESSAGE": 'INVALID DATA'}), 404
-    
 
     if not MAXRETRIES:
         MAXRETRIES = 3
 
     try:  
-        service = APIService(token=SECRET_KEY, publishable_key=PUBLISHABLE_KEY)
+        service =initiate_intasend_service()
 
         for t in range(MAXRETRIES):
             LOG.api_logger.info(f"Checking payment status for InvoiceID={invoice_id}, Attempt={t+1}/{MAXRETRIES}")
 
             if SIMULATE:
                 LOG.api_logger.info(f"Simulating payment status check for InvoiceID={invoice_id}, Elapsed Time={t}")
-            status = service.collect.status(invoice_id) if not SIMULATE else simulate_status(invoice_id=invoice_id,elapsed_time=t+1)
 
+            status = service.collect.status(invoice_id) if not SIMULATE else simulate_status(invoice_id=invoice_id,elapsed_time=t+1)
 
             STAGE = status['invoice']['state']
             reason = status['invoice']['failed_reason']
 
+            LOG.api_logger.debug("Status check result < INVOICE ID {} :STAGE {} :REASON {} >".format(invoice_id ,STAGE , reason))
+
             if reason == "Request cancelled by user":
-                LOG.api_logger.info(f"Request cancelled by user InvoiceID={invoice_id}, New Status={status}")
+                LOG.api_logger.info(f"Request cancelled by user InvoiceID={invoice_id}")
+        
                 update_payment_status(invoice_id=invoice_id , status="FAILED")
                 return jsonify({"MESSAGE": "FAILED" ,"status":status}), 200
 
 
             if STAGE == 'COMPLETE':
-                LOG.api_logger.info(f"Payment status updated: InvoiceID={invoice_id}, New Status={status}")
+                LOG.api_logger.info(f"Payment completed: InvoiceID={invoice_id}, New Status={status}")
+
                 update_payment_status(invoice_id=invoice_id , status="COMPLETE")
                 return jsonify({"MESSAGE": "COMPLETE" ,"status":status}), 200
 
             if STAGE == 'FAILED':
-                LOG.api_logger.info(f"Payment status updated: InvoiceID={invoice_id}, New Status={status}")
+                LOG.api_logger.info(f"Payment failed: InvoiceID={invoice_id}")
+
                 update_payment_status(invoice_id=invoice_id , status='FAILED')
                 return jsonify ({"MESSAGE": "FAILED","status":status}), 400
 
             elif  STAGE == 'CANCELED':
-                LOG.api_logger.info(f"Payment status updated: InvoiceID={invoice_id}, New Status={status}")
+                LOG.api_logger.info(f"Request cancelled by user: InvoiceID={invoice_id}")
+
                 update_payment_status(invoice_id=invoice_id , status='FAILED')
                 return jsonify( {"MESSAGE": "FAILED","status":status}), 400
 
             time.sleep(0.5)
 
         LOG.api_logger.info(f"Transaction was never  successfully completed :reason <{reason}> :invoice_id<{invoice_id}>")
-        LOG.api_logger.info("##"*35)
         return jsonify({"MESSAGE": "WAITING","status":status}), 202
 
     except Exception as e:
@@ -182,10 +219,7 @@ def get_payment():
     phone = data.get("phone", None)
     price = data.get("amount", None)
     orderid = data.get('orderid' ,None)
-    
-    session.update(data)
- 
-    
+        
     if price and phone and orderid :
         LOG.api_logger.debug(f"FIRST REQUEST making remote pay requests to {phone}")
         invoiceid = make_request_to_instasend(pub=PUBLISHABLE_KEY, key=SECRET_KEY, 

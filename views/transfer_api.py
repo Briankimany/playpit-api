@@ -274,7 +274,6 @@ def approve_trasfer_batch():
 @content_type_is_json
 @api_error_logger(logger=LOG.get_payment_logger)
 def update_batch():
-
     try:
         tracking_id = request.get_json().get("tracking_id" ,None)
     except Exception as e:
@@ -420,7 +419,6 @@ def inspect():
 
     duration = timedelta(days = interval)
 
-    print("the date is " , check_date)
     data = trans_db.transfer_manager.grab_all_transfers([(check_date ,logic)])
     if not data:
         data = "No data found"

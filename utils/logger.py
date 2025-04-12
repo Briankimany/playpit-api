@@ -31,8 +31,8 @@ class LOG:
     LOG_DIR = Path(os.getenv("LOG_DIR",'LOGS'))
 
     db_logger = init_logger(LOG_DIR/'database.log','database')
-    api_logger = init_logger(LOG_DIR/'payment_api.log' ,'transfer-api')
-    get_payment_logger = init_logger(LOG_DIR/'transfer-requests.log' ,'payment-request')
+    api_logger = init_logger(LOG_DIR/'payment_api.log' ,'get-payment-api')
+    get_payment_logger = init_logger(LOG_DIR/'transfer-requests.log' ,'transfer-request')
 
 
 

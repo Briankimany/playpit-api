@@ -5,6 +5,7 @@ import json
 
 current_location = os.path.abspath('.')
 config_file = Path("config.json")
+
 if not config_file.exists():
     current_location = os.path.abspath('.')
     home_dir =  Path(current_location).home()
@@ -15,8 +16,10 @@ if not config_file.exists():
     else:
         CONTENT_LOCATION = Path(CONTENT_LOCATION)/'APP-DATA'
 
+
     DATABASE_LOCATION = CONTENT_LOCATION / "databasev1.db"
     USER_DB_LOCATION = CONTENT_LOCATION / "users.db"
+    SECURE_UTILS_LOCATION = CONTENT_LOCATION / "secure_utils.pkl"
 
     UPLOAD_DIR = CONTENT_LOCATION / 'UPLOADS'
     UPLOAD_DIR.mkdir(parents=True , exist_ok = True)
@@ -47,6 +50,7 @@ if not config_file.exists():
             'REMOTE_LINK':REMOTE_LINK,
             'TIME_LIMIT':TIME_LIMIT ,
             "VERIFICATION_SERVER_ADDRES":"http://10.0.0.1:5006/pay",
+            "SECURE_UTILS_LOCATION":str(SECURE_UTILS_LOCATION.absolute()),
             "LOG_DIR":str(LOG_DIR)}
 
     with open(config_file , 'w') as file:

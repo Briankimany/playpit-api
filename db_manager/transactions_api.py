@@ -5,24 +5,10 @@ import os ,json
 from db_manager.transactions import TransferManager
 from  pathlib import Path
 from utils.logger import LOG
+from utils.environ_variables import PUBLISHABLE_KEY , SECRET_KEY ,IN_DEVELOPMENT ,test 
 
 
 load_dotenv()
-
-test = True
-
-if not  os.getenv('SIMULATE_TRANSFERS','false').lower() == 'true':
-    
-    test= False
-    PUBLISHABLE_KEY = os.getenv("PUB_KEY")
-    SECRET_KEY = os.getenv("SECRET_KEY")
-
-else:
-
-    PUBLISHABLE_KEY = os.getenv("SANDBOX_PUBLISHABLE_KEY")
-    SECRET_KEY = os.getenv("SANDBOX_SECRET_KEY")
-
-
 
 def save(filepath ,data):
     with open(filepath ,'w') as file:

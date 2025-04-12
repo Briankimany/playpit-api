@@ -3,12 +3,19 @@ from sqlalchemy import (
     Column, Integer, String, DateTime, Boolean, DECIMAL, ForeignKey
 )
 
+from sqlalchemy_utils import database_exists, create_database
+
 from enum import Enum
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 import datetime
 from models.base import Base
-from models.init_db import engine 
+from models.init_db import engine   , session
+
+from utils.secure_utils import SecureUtils ,load_secure_utils
+from config.config import ConfigClass
+config = ConfigClass()
+
+secure_utils = load_secure_utils()
 
 
 
@@ -140,11 +147,32 @@ class User(Base):
 
     __tablename__ = "users"
     id = Column(Integer  , autoincrement=True , primary_key= True)
-    first_name = Column(String(20) ,nullable = False)
+    first_name = Column(String(20) ,nullable = False ,unique=True)
     second_name = Column(String(20) ,nullable= False)
-    email = Column(String(50) ,nullable = False)
-    password = Column(String(30))
+    email = Column(String(50) ,nullable = False ,unique=True)
 
+    _password = Column("password",String(250) ,nullable = False)
+
+    @property
+    def password (self):
+        return secure_utils.load_display_value(self._password)
+
+    @password.setter
+    def password(self ,value):
+        self._password = secure_utils.secure_store(value)
+
+    def verify_password(self ,password):
+        """
+        Verify the password against the stored hash if in prod mode,
+        or check the raw password if in dev mode.
+        """
+        return secure_utils.secure_check(password ,self._password)
+
+    def __str__(self):
+        return "(id: {} ,name: {} ,password: {})".format(self.id , self.first_name , self.password)
+    def __repr__(self):
+        return self.__str__()
+    
 
 
 class Token(Base):
@@ -177,4 +205,19 @@ def create_db():
 
 
 if __name__ == "__main__":
-    Base.metadata.create_all(engine)
+    if not database_exists(engine.url):
+        print("Database does not exist. Creating a new one...")
+        create_db()
+
+    name = input("Enter your name: ")
+    second_name = input("Enter your second name: ")
+    if name == "" or second_name == "":
+        raise ValueError("Name and second name cannot be empty.")
+    
+    email = input("Enter your email: ")
+    password = input("Enter your password: ")
+    user = User(first_name=name, second_name=name, email=email)
+    user.password = password
+    session.add(user)
+    session.commit()
+    print("User added successfully.")

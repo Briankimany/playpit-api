@@ -652,7 +652,10 @@ document.getElementById('inspectForm').addEventListener('submit', async (e) => {
 function renderInspectResults(data) {
   const display = data.map(item => {
     console.log("The status code is "+ item.status_code);
-    const isPending = item.status_code === 'BP103'; // Your specific pending code
+    const isPending = item.status_code === 'BP103';
+    // const needsUpdate = item.status_code !== 'BP100' && item.status_code !== 'BP103';
+    const needsUpdate = !['BC100', 'BP103'].includes(item.status_code);
+    console.log(item.tracking_id, item.status_code,"Needs update: ", needsUpdate);
     return `
     <div class="card mb-3" id="batch-${item.tracking_id}">
       <div class="card-body">
@@ -674,7 +677,12 @@ function renderInspectResults(data) {
             <button class="btn btn-sm btn-outline-info mb-1" 
               onclick="checkAndShowTransferStatus('${item.tracking_id}')">
               <i class="fas fa-search"></i> Status
-            </button>
+            ${needsUpdate ? `
+              <button class="btn btn-sm btn-warning" 
+                      onclick="checkAndUpdateStatus('${item.tracking_id}')">
+                <i class="fas fa-check"></i> Check and Update Status
+              </button>` : ''}
+
             ${isPending ? `
             <div class="btn-group mt-1">
               <button class="btn btn-sm btn-success" 
