@@ -17,7 +17,6 @@ def init_logger(log_file: Path, name:str):
         logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     )
 
-    
     logger = logging.getLogger(name)
     logger.handlers.clear()
     logger.setLevel(getattr(logging, os.getenv("LOGGING_LEVEL",'DEBUG').upper()))
@@ -33,10 +32,12 @@ class LOG:
     db_logger = init_logger(LOG_DIR/'database.log','database')
     api_logger = init_logger(LOG_DIR/'payment_api.log' ,'get-payment-api')
     get_payment_logger = init_logger(LOG_DIR/'transfer-requests.log' ,'transfer-request')
+    intasend_logger = init_logger(LOG_DIR/"intasend-request.log" ,'intasend-req')
 
 
 
-def db_error_logger(logger:LOG ):
+
+def db_error_logger(logger:LOG  ,raise_exception =False):
     def wrapper(func):
         @wraps(func)
         def wrapper_func(*args,**kwargs):
@@ -45,6 +46,8 @@ def db_error_logger(logger:LOG ):
             except Exception as e:
                 message = f" error {str(e)} from {func.__name__} ,args=({args}) ,kwargs=({kwargs})"
                 logger.error(message)
+                if raise_exception:
+                    raise Exception(f"Error {e}")
                 return None
         return wrapper_func
     return wrapper

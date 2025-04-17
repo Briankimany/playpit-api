@@ -8,7 +8,9 @@ load_dotenv()
 
 API_TOKEN = os.getenv("API_TOKEN")
 IN_DEVELOPMENT = os.getenv("MY_IN_DEVELOPMENT", 'true').lower() == 'true'
-print("IN_DEVELOPMENT", IN_DEVELOPMENT)
+
+LOG.api_logger.info("IN_DEVELOPMENT: {}".format(IN_DEVELOPMENT))
+
 SIMULATE_TRANSFERS = os.getenv("SIMULATE_TRANSFERS", "true").lower() == 'true'
 
 
@@ -28,4 +30,21 @@ else:
 
 
 
-print(f"in the environ file {IN_DEVELOPMENT}")
+class StatusCodes:
+    WAITING = ["TP101", "TP102", "TF104", "TR109"]
+
+    CANCELED = ["TF10"]
+
+    SUCCESS = ["TS100" ,'TF103']
+
+    CONTACT_ADMIN = ["TP105", "TC108", "TF106"]
+
+    TERMINAL_STATUS_CODES = CANCELED + SUCCESS +CONTACT_ADMIN
+
+
+API_TOKEN = os.getenv("API_TOKEN")
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+
+
+
+DOCS_ACCESS_TOKEN = os.getenv("DOCS_ACCESS_TOKEN") if not IN_DEVELOPMENT else "test"

@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import os ,json
 from db_manager.transactions import TransferManager
 from  pathlib import Path
-from utils.logger import LOG
+from utils.logger import LOG ,db_error_logger
 from utils.environ_variables import PUBLISHABLE_KEY , SECRET_KEY ,IN_DEVELOPMENT ,test 
 
 
@@ -67,29 +67,34 @@ class TransactionApi:
         self.pending_approval_dir.mkdir(parents = True , exist_ok = True)
 
         self.logger = LOG
+    def __str__(self):
+        return f"<{self.services} ,{self.logger} ,{self.__class__}"
 
+    @db_error_logger(logger=LOG.intasend_logger ,raise_exception=True)
     def carry_out_transaction(self,needed_transactions,requires_approval = 'YES'):
-        transactions = [{'name':name,'account':phone ,'amount':amount} for name ,phone,amount in needed_transactions]
+        transactions = [{'name':name.strip(),
+                         'account':phone.strip() ,
+                         'amount':int(amount)} for name ,phone,amount in needed_transactions]
 
         response = self.services.transfer.mpesa(
             currency='KES' ,transactions=transactions ,requires_approval=requires_approval
 
         )
         return response
-
+    
+    @db_error_logger(logger=LOG.intasend_logger ,raise_exception=True)
     def approve_transfer(self,response):
         app = self.services.transfer.approve(response)
         return app
 
+    @db_error_logger(logger=LOG.intasend_logger ,raise_exception=True)
     def check_status(self,reference_id):
         return self.services.transfer.status(reference_id)
 
 
     #1. initiate bulk transfer
     def execute_transfer(self, transactions, requires_approval='YES'):
-        """
 
-        """
         response = self.carry_out_transaction(
             needed_transactions=transactions,
             requires_approval=requires_approval
@@ -97,7 +102,7 @@ class TransactionApi:
 
         if requires_approval =="YES":
             file_path = (self.pending_approval_dir/response['tracking_id']).with_suffix(".json")
-            print(file_path)
+            
 
         self.process_transfer_step(
             response=response,

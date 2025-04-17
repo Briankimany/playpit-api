@@ -10,7 +10,7 @@ else:
     db_url = f"sqlite:///{config.DATABASE_LOCATION.absolute()}"
     # db_url = f"sqlite:///{config.DATABASE_LOCATION}"      
 
-engine = create_engine(db_url)
+engine = create_engine(db_url,pool_size = 1 ,max_overflow=1 ,pool_timeout=10)
 
 session = scoped_session(
     sessionmaker(

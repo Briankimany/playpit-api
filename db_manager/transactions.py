@@ -1,24 +1,21 @@
 from models.transfers import BatchedTransfer ,IndividualTransfer
-from sqlalchemy import create_engine ,func
+from models.init_db import engine
+from sqlalchemy import  func
 from sqlalchemy.orm import sessionmaker
 
 from contextlib import contextmanager
-from typing import List ,Dict , Tuple
+from typing import List ,Dict 
 
 
 from operator import eq ,le ,ge ,lt , gt
 
 from utils.logger import LOG , db_error_logger 
-from utils.status_codes import  BatchRequestStatus ,TransactionStatus
+from utils.status_codes import  BatchRequestStatus
 from config.config import ConfigClass
 
 config = ConfigClass()
-if str(config.DATABASE_LOCATION) == '':
-    raise ValueError("DATABASE_LOCATION is not set in the config file.")
-else:   
-    db_url = f"sqlite:///{config.DATABASE_LOCATION.absolute()}"
 
-engine = create_engine(db_url)
+
 
 
 def update_object_attributes(tartget_object ,new_values:dict):
@@ -44,7 +41,7 @@ class TransferManager:
 
     @classmethod
     @contextmanager
-    def session_scope(cls,*args ,**kwargs):
+    def session_scope(cls,close_session = True ,*args ,**kwargs):
         db_session = cls.Session()
         db_session.expire_on_commit = False
         try:
@@ -52,11 +49,10 @@ class TransferManager:
         except Exception as e:
             LOG.db_logger.error(f"Error {e} during record args=({args}) ,kwargs=({kwargs})")
             db_session.rollback()
-            db_session.close()
         finally:
-            db_session.close()
-
-
+            if close_session:
+                db_session.close()
+        
 
     @classmethod
     def record_transfers(cls,bulk_transaction_data:Dict ,individual_transaction_data:List[Dict]):
@@ -158,13 +154,10 @@ class TransferManager:
             condition = cls.mapper[comparitor_str](getattr(IndividualTransfer ,key),value)
             all_conditions.append(condition)
 
-        with cls.session_scope() as db_session:
-            record = db_session.query(IndividualTransfer).filter(
-                *all_conditions
-            ).all()
-            if not record:
-                return None
-            return record 
+        with cls.session_scope(close_session=False) as db_session:
+            record = db_session.query(IndividualTransfer).filter(*all_conditions).all()
+            return record ,db_session
+        
 
     @classmethod
     def get_batch_transfer_children(cls ,tracking_id):
@@ -179,15 +172,18 @@ class TransferManager:
     def grab_all_transfers(cls ,conditions):
         conditions  = [cls.mapper[logic](func.date(BatchedTransfer.created_at) ,date) for date , logic in conditions]
         
-        records = BatchedTransfer.query.filter(*conditions).all()
-        return [i.to_dict(True) for i in records]
+        with cls.session_scope() as db_session:
+            records = db_session.query.filter(*conditions).all()
+            return [i.to_dict(True) for i in records]
+        
 
     @classmethod
     def  get_status(cls):
 
-        data = BatchedTransfer.query.with_entities(BatchedTransfer.status_code).distinct().all()
+        with cls.session_scope() as db_session:
+            data = db_session.query(BatchedTransfer.status_code).distinct().all()
+            status_codes = [i[0] for i in data]
 
-        status_codes = [i[0] for i in data]
-
-        return [getattr(BatchRequestStatus ,i) for i in status_codes]
+            return [getattr(BatchRequestStatus ,i) for i in status_codes]
+        
     

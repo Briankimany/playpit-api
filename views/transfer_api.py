@@ -8,16 +8,13 @@ from functools import wraps
 from datetime import datetime ,timedelta
 from pathlib import Path
 
-API_TOKEN = os.getenv("API_TOKEN")
-ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+from utils.environ_variables import IN_DEVELOPMENT , StatusCodes ,ADMIN_TOKEN ,DOCS_ACCESS_TOKEN ,API_TOKEN
+
 
 transfer_bp = Blueprint('transfer',__name__ ,url_prefix='/transfers' 
                         ,template_folder=Path('templates/transfer/').absolute())
 
 trans_db  = TransactionApi()
-IN_DEVELOPMENT = os.getenv("IN_DEVELOPMENT",'false').lower() == "true"
-DOCS_ACCESS_TOKEN = os.getenv("DOCS_ACCESS_TOKEN") if not IN_DEVELOPMENT else "test"
-
 
 # =================
 # HELPER FUNCTIONS
@@ -27,12 +24,21 @@ def extract_request_data(records):
     name = records.get("name" ,None)
     phone = records.get('phone',None)
     amount = records.get('amount',None)
+    if amount:
+        amount = int(amount)
+
+    if name:
+        name = name.strip(".")
     return name ,phone ,amount
 
 def get_api_key(key = "Authorization"):
     api_key = request.headers.get(key ,"None None")
-    api_key = api_key.split(" ")[1] if api_key else None
-    return api_key
+    api_key = api_key.split(" ")
+
+    if  len(api_key) < 2:
+        return
+
+    return api_key[1]
 
 
 
@@ -135,10 +141,15 @@ def transfer_home():
     data = request.get_json()
     records = data.get("records" ,None)
 
+    LOG.api_logger.info(f"inititating withdraw for {records}")
+
     if not records: 
         return jsonify({"message":"records is required" }) ,400
     
     name , phone ,amount = extract_request_data(records)
+    print(type(amount) , amount)
+    assert type(amount) == int
+
     requires_approval = data.get("requires_approval" ,"YES")
 
     if not all([records ,name ,phone ,amount]):
@@ -150,10 +161,13 @@ def transfer_home():
         requires_approval=requires_approval
     )
 
+    reference_ids = [i['request_reference_id'] for i in response['transactions']]
+
     return jsonify(
         {"message":"success",
          'data':"transfer initiated awaiting approval" if requires_approval == "YES" else "transfer initiated",
-         'tracking_id':response['tracking_id']}
+         'tracking_id':response['tracking_id'],
+         'reference_ids':reference_ids}
     ) ,200
 
 
@@ -201,10 +215,13 @@ def initiate_bulk():
     response = trans_db.execute_transfer(
         transactions=transactions,
         requires_approval=requires_approval
-    )    
+    )   
+    reference_ids = [i['request_reference_id'] for i in response['transactions']]
+
     return jsonify({
         "message":"success",
         "tracking_id":response['tracking_id'],
+        'reference_ids':reference_ids
     }) , 200
 
 
@@ -279,11 +296,9 @@ def update_batch():
     except Exception as e:
         return jsonify({"message":"error" ,'data':"Invalid data format"}) , 400
 
-
     if not tracking_id:
          return jsonify({"message":"tracking_id is required" }) ,400
 
-    
     response = trans_db.check_and_update_batch_status(tracking_id)
 
     if response:
@@ -333,7 +348,7 @@ def check_status():
 
 
 @transfer_bp.route("/transfer-status")
-@token_required(True)
+@token_required()
 @api_error_logger(logger=LOG.get_payment_logger)
 def individual_tranfer_status():
     """
@@ -353,11 +368,21 @@ def individual_tranfer_status():
     if not isinstance(reference_id ,str):   
         return jsonify({"message":"reference_id should be a string" }) ,400
     
-    transfer_data = trans_db.transfer_manager.query_individual_transfer(
+    transfer_data  ,db_session = trans_db.transfer_manager.query_individual_transfer(
         {"request_reference_id":("eq" ,reference_id)}
     )
+
     if not transfer_data:
         return jsonify({"message":"reference_id does not exist" }) ,400
+
+    status = transfer_data[0].status_code
+    tracking_id = transfer_data[0].batch.tracking_id
+    db_session.close()
+
+    if not status in StatusCodes.TERMINAL_STATUS_CODES:
+        LOG.get_payment_logger.info(f"Checking the status ref id {reference_id} ")
+        trans_db.check_and_update_batch_status(tracking_id)
+    
     transfer_data = [i.to_dict() for i in transfer_data]
     return jsonify(
         {"message":"success",
@@ -415,7 +440,7 @@ def inspect():
             return jsonify({"message":"failed" ,"data": "Invalid date format. Use YYYY-MM-DD."}), 400
 
     logic = data.get('logic' ,'eq') # ge ,eq , le
-    interval = data.get("interval",30) if logic !='eq' else 0 # the number of day to go past or foward
+    interval = data.get("interval",30) if logic !='eq' else 0
 
     duration = timedelta(days = interval)
 

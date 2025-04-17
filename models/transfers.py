@@ -135,7 +135,6 @@ class IndividualTransfer(Base):
             'account': self.recipient_account,
             'amount':self.amount,
             'reference_id': self.request_reference_id,
-          
             'status_code':self.status_code,
             'charges':self.charges,
             'created_at': datetime.datetime.strftime(self.created_at ,"%Y-%m-%d %H:%M:%S")  

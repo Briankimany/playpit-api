@@ -55,7 +55,7 @@ def make_request_to_instasend(pub, key, phone: int, amount,orderid ,description=
 
             response = service.collect.mpesa_stk_push(phone_number=phone, amount=amount, narrative=description)
 
-            LOG.api_logger.debug(f"Received response from Intasend: {response}")
+            LOG.api_logger.debug(f"Received response from Intasend:Invoice id= {response['invoice']['invoice_id']}")
 
             if "errors" in response:
                 raise
@@ -189,39 +189,14 @@ def check_payment_status():
 @content_type_is_json
 @api_error_logger(logger = LOG.api_logger , in_development=IN_DEVELOPMENT)
 def get_payment():
-    """
-    Initiate payment request to Intasend
-    ---
-    parameters:
-      - name: phone
-        in: body
-        type: string
-        required: true
-        description: Phone number to send payment request to
-      - name: amount
-        in: body
-        type: float
-        required: true
-        description: Amount to be paid
-      - name: orderid
-        in: body
-        type: string
-        required: true
-        description: Order ID for the payment request
-    responses:
-      200:
-        description: Payment request initiated successfully
-      404:
-        description: Invalid data provided
-    
-    """
+
     data = request.get_json()
     phone = data.get("phone", None)
     price = data.get("amount", None)
     orderid = data.get('orderid' ,None)
         
     if price and phone and orderid :
-        LOG.api_logger.debug(f"FIRST REQUEST making remote pay requests to {phone}")
+       
         invoiceid = make_request_to_instasend(pub=PUBLISHABLE_KEY, key=SECRET_KEY, 
                                               phone=int(phone), 
                                               amount=int(float(price)) ,

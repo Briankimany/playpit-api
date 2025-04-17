@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 
 current_location = os.path.abspath('.')
-config_file = Path("config.json")
+config_file = Path("app_config.json").absolute()
 
 if not config_file.exists():
     current_location = os.path.abspath('.')
