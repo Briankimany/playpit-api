@@ -100,5 +100,4 @@ def get_payment_status(invoice_id):
 
 
 if __name__ == "__main__":
-
-    data = {"first_name":"Brian" ,"second_name":"Gatu" ,"email":"briankimani328@gmail.com" ,"password":"myverysecurepassword"}
+    pass

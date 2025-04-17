@@ -173,7 +173,7 @@ class TransferManager:
         conditions  = [cls.mapper[logic](func.date(BatchedTransfer.created_at) ,date) for date , logic in conditions]
         
         with cls.session_scope() as db_session:
-            records = db_session.query.filter(*conditions).all()
+            records = db_session.query(BatchedTransfer).filter(*conditions).all()
             return [i.to_dict(True) for i in records]
         
 

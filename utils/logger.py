@@ -21,7 +21,6 @@ def init_logger(log_file: Path, name:str):
     logger.handlers.clear()
     logger.setLevel(getattr(logging, os.getenv("LOGGING_LEVEL",'DEBUG').upper()))
     
-
     logger.addHandler(file_handler)
     
     return logger
